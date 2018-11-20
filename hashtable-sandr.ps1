@@ -13,29 +13,21 @@
 # This generates a set of CSVs that get off-loaded elsewhere for other processing.
 #
 
+# Our list of services and their hosts
 $request = "http://www.openspeak.net/downloads/service-hosts.json"
 
-$json = Invoke-WebRequest $request | ConvertFrom-Json
+# Suck in our service/host list as a JSON object
+$json = Invoke-RestMethod -Uri $request
+$json = $json | ConvertTo-Json -Depth 3 | ConvertFrom-Json
 
-$hastable = @{}
-foreach( $property in $json.psobject.Properties.name ) {
-  $hastable[$property] = $json.$property
-}
+# Dot source to setup our environment
+. ".\runAppServerLogins.ps1"
 
-foreach ($h in $hastable.GetEnumerator()) {
-
-  Write-Host "Begin scan of service $($h.Name) ... "
-  #Write-Host "$($h.Value) | Get-PAMLocalUser"
-#
-# Begin ghetto silliness; how do I perform this better? I tried editing the 
-# source JSON to not include the '"'s with no luck.
-#
-  $FrustratedTears = '"'+"$($h.Value) | Get-PAMLocalUser"
-  $FrustratedTears = $bob.Replace('.pvt ','.pvt", ')
-  $FrustratedTears = $bob.Replace('.com ','.com", ')
-  $FrustratedTears = $bob.Replace('.org ','.org", ')
-  $FrustratedTears = $bob.Replace(', ',', "')
-  $FrustratedTears = $bob.Replace(', "| ', ' | ')
-  $FrustratedTears
-  
+foreach ($item in $json) {
+  $cmdLine = ""
+  foreach ($property in $item.psobject.Properties) {
+    $cmdLine = '"'+"$($property.Value)"+'"' -replace ' ', '", "'
+    $cmdLine = $cmdLine + " | Get-PAMLocalUser"
+    iex $cmdLine # Do the scan
+  }  
 }
