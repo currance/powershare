@@ -23,11 +23,28 @@ $json = $json | ConvertTo-Json -Depth 3 | ConvertFrom-Json
 # Dot source to setup our environment
 . ".\runAppServerLogins.ps1"
 
-foreach ($item in $json) {
+# Enumerate first level JSON; services
+foreach ($item in $json) {  
+
   $cmdLine = ""
+  $zipList = ""  
+  
+  # Enumerate second level JSON; hosts
   foreach ($property in $item.psobject.Properties) {
+      
+    #$zipList = $zipList + " " + $($property.Value).split('.')[0]
+    $zipList = $($property.Value) -replace '$', '-IALocalUserAudit.csv'
+        
     $cmdLine = '"'+"$($property.Value)"+'"' -replace ' ', '", "'
     $cmdLine = $cmdLine + " | Get-PAMLocalUser"
     iex $cmdLine # Do the scan
-  }  
+    
+    #Powershell v3 is lacking in archive management; thank you GNUwin32
+    $zipLine = ".\zip.exe " + $filedate + "-" + $property.name + ".zip " + $zipList
+    iex $zipLine
+
+    #CleanUp
+    Remove-Item *.csv
+  }
+    
 }
